@@ -1,4 +1,4 @@
 # Feature Switch
 
 ## install
-* pip install ucx-py-cu12
+* conda install -c conda-forge -c rapidsai ucx-py
