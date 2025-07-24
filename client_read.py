@@ -20,7 +20,7 @@ async def main():
         buf = np.arange(length, dtype=np.uint8)
         logging.info("[Reader] receiving key: {}".format(key))
         await ep.recv(buf)
-        logging.info("[Writer] received key: {}".format(key))
+        logging.info("[Reader] received key: {}".format(key))
         idx += 1
         await asyncio.sleep(1)
 
