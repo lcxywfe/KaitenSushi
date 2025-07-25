@@ -10,7 +10,8 @@ from utils import *
 length = 100 * 1024 * 1024
 
 key_queue = queue.Queue()
-buf_queue = queue.Queue()
+buf_map = dict()
+buf_con = threading.Condition()
 
 async def read():
     ep = await ucp.create_endpoint("127.0.0.1", 13337)
@@ -27,15 +28,23 @@ async def read():
         await ep.send(fh.buffer)
 
         logging.info("[Reader] receiving key: {}".format(key))
-        buf = np.arange(length, dtype=np.uint8)
+        buf = np.empty(length, dtype=np.uint8)
         await ep.recv(buf)
         logging.info("[Reader] received key: {}".format(key))
-        buf_queue.put(buf)
+        with buf_con:
+            buf_map[key] = buf
+            buf_con.notify_all()
 
     await ep.close()
 
 def async_reader():
     asyncio.run(read())
+
+def wait_for(key):
+    with buf_con:
+        while key not in buf_map:
+            buf_con.wait()
+        return buf_map.pop(key)
 
 if __name__ == "__main__":
     init_logging()
@@ -47,17 +56,22 @@ if __name__ == "__main__":
 
     time.sleep(1)
 
-    key = "key1"
-    key_queue.put(key)
-    buf = buf_queue.get()
-    logging.info("Got {}".format(key))
+    key_queue.put("key2")
+    key_queue.put("key0")
+    key_queue.put("key1")
 
+    buf = wait_for("key0")
+    logging.info("Got {}".format("key0"))
     time.sleep(1)
 
-    key = "key0"
-    key_queue.put(key)
-    buf = buf_queue.get()
-    logging.info("Got {}".format(key))
+    buf = wait_for("key1")
+    logging.info("Got {}".format("key1"))
+    time.sleep(1)
+
+    buf = wait_for("key2")
+    logging.info("Got {}".format("key2"))
+    time.sleep(1)
+
 
     key_queue.put("close")
 
