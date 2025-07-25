@@ -24,7 +24,7 @@ async def main():
         idx += 1
         await asyncio.sleep(1)
 
-        if idx == 10:
+        if idx == 3:
             fh = FeatureHeader("close")
             await ep.send(fh.buffer)
             break
