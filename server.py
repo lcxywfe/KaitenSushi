@@ -8,12 +8,14 @@ from utils import *
 feature_dict = dict()
 finish_dict = dict()
 
-lock = asyncio.Lock()
+feature_lock = asyncio.Lock()
+finish_cond = asyncio.Condition()
 
 async def send_when_ready(ep, key, length):
-    while key not in finish_dict:
-        await asyncio.sleep(0.01)
-    async with lock:
+    async with finish_cond:
+        await finish_cond.wait_for(lambda: key in finish_dict)
+
+    async with feature_lock:
         buf = feature_dict[key]
     assert len(buf) == KEY_BYTES + length
     logging.info("[Server] Sending to client: {}, key: {}".format(ep.uid, key))
@@ -21,7 +23,6 @@ async def send_when_ready(ep, key, length):
     logging.info("[Server] Sent to client: {}, key: {}".format(ep.uid, key))
 
 async def handler(ep):
-
     ch = ClientHeader()
     await ep.recv(ch.buffer)
     logging.info("[Server] Connected client uid: {}, mode: {}, length {}".format(ep.uid, ch.mode(), ch.length()))
@@ -36,18 +37,19 @@ async def handler(ep):
         key = fh.key()
 
         if ch.mode() == "write":
-            async with lock:
+            buf = np.empty(KEY_BYTES + ch.length(), dtype=np.uint8)
+            buf[:KEY_BYTES] = np.frombuffer(key.encode().ljust(KEY_BYTES, b' '), dtype=np.uint8)
+            async with feature_lock:
                 assert key not in feature_dict
-                buf = np.empty(KEY_BYTES + ch.length(), dtype=np.uint8)
-                buf[:KEY_BYTES] = np.frombuffer(key.encode().ljust(KEY_BYTES, b' '), dtype=np.uint8)
                 feature_dict[key] = buf
 
             logging.info("[Server] Receiving from client: {}, key: {}".format(ep.uid, key))
             await ep.recv(feature_dict[fh.key()][KEY_BYTES:])
             logging.info("[Server] Received from client: {}, key: {}".format(ep.uid, key))
 
-            async with lock:
+            async with finish_cond:
                 finish_dict[key] = True
+                finish_cond.notify_all()
 
         elif ch.mode() == "read":
             task = asyncio.create_task(send_when_ready(ep, key, ch.length()))
