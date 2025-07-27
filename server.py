@@ -11,6 +11,21 @@ finish_dict = dict()
 feature_lock = asyncio.Lock()
 finish_cond = asyncio.Condition()
 
+async def recv(ep, key, length):
+    buf = np.empty(KEY_BYTES + length, dtype=np.uint8)
+    buf[:KEY_BYTES] = np.frombuffer(key.encode().ljust(KEY_BYTES, b' '), dtype=np.uint8)
+    async with feature_lock:
+        assert key not in feature_dict
+        feature_dict[key] = buf
+
+    logging.info("[Server] Receiving from client: {}, key: {}".format(ep.uid, key))
+    await ep.recv(feature_dict[key][KEY_BYTES:])
+    logging.info("[Server] Received from client: {}, key: {}".format(ep.uid, key))
+
+    async with finish_cond:
+        finish_dict[key] = True
+        finish_cond.notify_all()
+
 async def send_when_ready(ep, key, length):
     async with finish_cond:
         await finish_cond.wait_for(lambda: key in finish_dict)
@@ -22,10 +37,10 @@ async def send_when_ready(ep, key, length):
     await ep.send(buf)
     logging.info("[Server] Sent to client: {}, key: {}".format(ep.uid, key))
 
-async def handler(ep):
+async def server(ep):
     ch = ClientHeader()
     await ep.recv(ch.buffer)
-    logging.info("[Server] Connected client uid: {}, mode: {}, length {}".format(ep.uid, ch.mode(), ch.length()))
+    logging.info("[Server] Connected client uid: {}, mode: {}".format(ep.uid, ch.mode()))
 
     tasks = []
 
@@ -37,22 +52,10 @@ async def handler(ep):
         key = fh.key()
 
         if ch.mode() == "write":
-            buf = np.empty(KEY_BYTES + ch.length(), dtype=np.uint8)
-            buf[:KEY_BYTES] = np.frombuffer(key.encode().ljust(KEY_BYTES, b' '), dtype=np.uint8)
-            async with feature_lock:
-                assert key not in feature_dict
-                feature_dict[key] = buf
-
-            logging.info("[Server] Receiving from client: {}, key: {}".format(ep.uid, key))
-            await ep.recv(feature_dict[fh.key()][KEY_BYTES:])
-            logging.info("[Server] Received from client: {}, key: {}".format(ep.uid, key))
-
-            async with finish_cond:
-                finish_dict[key] = True
-                finish_cond.notify_all()
+            await recv(ep, key, fh.length())
 
         elif ch.mode() == "read":
-            task = asyncio.create_task(send_when_ready(ep, key, ch.length()))
+            task = asyncio.create_task(send_when_ready(ep, key, fh.length()))
             tasks.append(task)
 
         else:
@@ -62,7 +65,7 @@ async def handler(ep):
     await ep.close()
 
 async def main():
-    listener = ucp.create_listener(handler, port=13337)
+    listener = ucp.create_listener(server, port=13337)
     logging.info("[Server] Listening on port {}".format(listener.port))
     while True:
         await asyncio.sleep(1)

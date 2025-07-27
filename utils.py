@@ -13,24 +13,24 @@ def init_logging(level=logging.INFO):
     )
 
 class ClientHeader:
-    def __init__(self, mode = None, length = None):
-        self.buffer = bytearray(MODE_BYTES + LENGTH_BYTES)
+    def __init__(self, mode = None):
+        self.buffer = bytearray(MODE_BYTES)
         if mode is not None:
-            self.buffer[:8] = mode.encode().ljust(8, b' ')
-        if length is not None:
-            self.buffer[8:16] = struct.pack('Q', length)
+            self.buffer[:MODE_BYTES] = mode.encode().ljust(MODE_BYTES, b' ')
 
     def mode(self):
-        return self.buffer[:8].decode().rstrip()
-
-    def length(self):
-        return struct.unpack("Q", self.buffer[8:])[0]
+        return self.buffer[:MODE_BYTES].decode().rstrip()
 
 class FeatureHeader:
-    def __init__(self, key = None):
-        self.buffer = bytearray(KEY_BYTES)
+    def __init__(self, key = None, length = None):
+        self.buffer = bytearray(KEY_BYTES + LENGTH_BYTES)
         if key is not None:
-            self.buffer = key.encode().ljust(64, b' ')
+            self.buffer[:KEY_BYTES] = key.encode().ljust(KEY_BYTES, b' ')
+        if length is not None:
+            self.buffer[KEY_BYTES:] = struct.pack('Q', length)
 
     def key(self):
-        return self.buffer.decode().rstrip()
+        return self.buffer[:KEY_BYTES].decode().rstrip()
+
+    def length(self):
+        return struct.unpack("Q", self.buffer[KEY_BYTES:])[0]

@@ -8,13 +8,13 @@ length = 100 * 1024 * 1024
 
 async def main():
     ep = await ucp.create_endpoint("127.0.0.1", 13337)
-    ch = ClientHeader("write", length)
+    ch = ClientHeader("write")
     await ep.send(ch.buffer)
 
     idx = 0
     while True:
         key = "key{}".format(idx)
-        fh = FeatureHeader(key)
+        fh = FeatureHeader(key, length)
         await ep.send(fh.buffer)
 
         buf = np.arange(length, dtype=np.uint8)

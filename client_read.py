@@ -16,7 +16,7 @@ buf_con = threading.Condition()
 
 async def read():
     ep = await ucp.create_endpoint("127.0.0.1", 13337)
-    ch = ClientHeader("read", length)
+    ch = ClientHeader("read")
     await ep.send(ch.buffer)
     while True:
         keys = key_queue.get()
@@ -28,7 +28,7 @@ async def read():
         fhs = []
         bufs = []
         for key in keys:
-            fhs.append(FeatureHeader(key))
+            fhs.append(FeatureHeader(key, length))
             bufs.append(np.empty(KEY_BYTES + length, dtype=np.uint8))
 
         logging.info("[Reader] receiving keys: {}".format(keys))
