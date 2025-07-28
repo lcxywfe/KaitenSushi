@@ -64,7 +64,7 @@ async def server(ep):
     await asyncio.gather(*tasks)
     await ep.close()
 
-async def kss_run(port):
+async def start_server(port):
     listener = ucp.create_listener(server, port=port)
     logging.info("[Server] Listening on port {}".format(listener.port))
     while True:
@@ -73,4 +73,4 @@ async def kss_run(port):
 if __name__ == "__main__":
     init_logging()
     ucp.init()
-    asyncio.run(main(13337))
+    asyncio.run(start_server(13337))

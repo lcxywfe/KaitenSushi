@@ -1,5 +1,6 @@
 import logging
 import struct
+import ucp
 
 
 MODE_BYTES = 8
@@ -12,6 +13,10 @@ def init_logging(level=logging.INFO):
         format='%(levelname).1s%(asctime)s.%(msecs)03d %(filename)s:%(lineno)d] %(message)s',
         datefmt='%m%d %H:%M:%S',
     )
+
+def init():
+    init_logging()
+    ucp.init()
 
 class ClientHeader:
     def __init__(self, mode = None):
