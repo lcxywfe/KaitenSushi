@@ -1,20 +1,21 @@
 import asyncio
+import logging
 import ucp
 import numpy as np
 
-from utils import *
+import kaitensushi as kss
 
 length = 100 * 1024 * 1024
 
 async def main():
     ep = await ucp.create_endpoint("127.0.0.1", 13337)
-    ch = ClientHeader("write")
+    ch = kss.ClientHeader("write")
     await ep.send(ch.buffer)
 
     idx = 0
     while True:
         key = "key{}".format(idx)
-        fh = FeatureHeader(key, length)
+        fh = kss.FeatureHeader(key, length)
         await ep.send(fh.buffer)
 
         buf = np.arange(length, dtype=np.uint8)
@@ -25,13 +26,12 @@ async def main():
         await asyncio.sleep(1)
 
         if idx == 3:
-            fh = FeatureHeader("close")
+            fh = kss.FeatureHeader("close")
             await ep.send(fh.buffer)
             break
 
     await ep.close()
 
 if __name__ == "__main__":
-    init_logging()
-    ucp.init()
+    kss.init()
     asyncio.run(main())
