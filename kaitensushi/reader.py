@@ -5,7 +5,7 @@ import time
 import ucp
 import numpy as np
 
-from utils import *
+from .utils import *
 
 length = 100 * 1024 * 1024
 batch = 3
@@ -14,10 +14,11 @@ key_queue = queue.Queue()
 buf_map = dict()
 buf_con = threading.Condition()
 
-async def read():
-    ep = await ucp.create_endpoint("127.0.0.1", 13337)
+async def start_reader(addr, port):
+    ep = await ucp.create_endpoint(addr, port)
     ch = ClientHeader("read")
     await ep.send(ch.buffer)
+    logging.info("[Reader] connected")
     while True:
         keys = key_queue.get()
         if len(keys) == 1 and keys[0] == "close":
@@ -47,34 +48,29 @@ async def read():
 
     await ep.close()
 
-def async_reader():
-    asyncio.run(read())
+def run_reader(addr, port):
+    asyncio.run(start_reader(addr, port))
 
-def wait_for(keys):
-    bufs = dict()
-    for key in keys:
-        with buf_con:
-            while key not in buf_map:
-                buf_con.wait()
-            bufs[key] = buf_map.pop(key)
-    return bufs
+class Reader:
+    def __init__(self, addr, port):
+        self._reader = threading.Thread(target=run_reader, args=(addr, port))
+        self._reader.start()
 
-if __name__ == "__main__":
-    init_logging()
-    ucp.init()
+    def __del__(self):
+        if self._reader is not None:
+            self._reader.join()
 
-    t_reader = threading.Thread(target=async_reader)
-    t_reader.start()
-    logging.info("Async reader threading start")
+    def read(self, keys):
+        key_queue.put(keys)
 
-    time.sleep(1)
+        bufs = dict()
+        for key in keys:
+            with buf_con:
+                while key not in buf_map:
+                    buf_con.wait()
+                bufs[key] = buf_map.pop(key)
+        return bufs
 
-    key_queue.put(["key2", "key0", "key1"])
-
-    bufs = wait_for(["key0", "key1", "key2"])
-    logging.info(bufs)
-
-    key_queue.put(["close"])
-
-    t_reader.join()
-    logging.info("Reader finished")
+    def close(self):
+        key_queue.put(["close"])
+        self._reader.join()
