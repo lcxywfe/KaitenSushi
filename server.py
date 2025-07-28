@@ -56,7 +56,7 @@ async def server(ep):
 
         elif ch.mode() == "read":
             task = asyncio.create_task(send_when_ready(ep, key, fh.length()))
-            tasks.append(task)
+            # tasks.append(task)
 
         else:
             logging.info("[Server] Unknown client mode: {}".format(ch.mode()))
