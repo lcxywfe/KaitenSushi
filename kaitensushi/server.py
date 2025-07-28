@@ -3,7 +3,7 @@ import ucp
 import numpy as np
 import logging
 
-from utils import *
+from .utils import *
 
 feature_dict = dict()
 finish_dict = dict()
@@ -64,8 +64,8 @@ async def server(ep):
     await asyncio.gather(*tasks)
     await ep.close()
 
-async def main():
-    listener = ucp.create_listener(server, port=13337)
+async def kss_run(port):
+    listener = ucp.create_listener(server, port=port)
     logging.info("[Server] Listening on port {}".format(listener.port))
     while True:
         await asyncio.sleep(1)
@@ -73,4 +73,4 @@ async def main():
 if __name__ == "__main__":
     init_logging()
     ucp.init()
-    asyncio.run(main())
+    asyncio.run(main(13337))

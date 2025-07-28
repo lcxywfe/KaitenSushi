@@ -1,6 +1,7 @@
 import logging
 import struct
 
+
 MODE_BYTES = 8
 LENGTH_BYTES = 8
 KEY_BYTES = 64
