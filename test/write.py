@@ -18,8 +18,8 @@ async def main():
         fh = kss.FeatureHeader(key, length)
         await ep.send(fh.buffer)
 
-        buf = np.arange(length, dtype=np.uint8)
-        logging.info("[Writer] Sending key: {}".format(key))
+        buf = np.random.randint(0, 100, size=length, dtype=np.uint8)
+        logging.info("[Writer] Sending key: {}, value {}".format(key, buf.mean()))
         await ep.send(buf)
         logging.info("[Writer] Sent key: {}".format(key))
         idx += 1
