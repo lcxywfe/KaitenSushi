@@ -13,8 +13,26 @@ cd ucx && git checkout v1.8.1
 ./contrib/configure-release --prefix=/opt/ucx --enable-mt
 make -j$(nproc)
 sudo make install
+
+sudo mkdir -p /opt/ucxx
+git clone https://github.com/rapidsai/ucxx.git
+cd ucxx/cpp
+mkdir build && build
+cmake .. -DCMAKE_INSTALL_PREFIX=/opt/ucxx -DCMAKE_PREFIX_PATH=/opt/ucx -DBUILD_TESTS=OFF
+make -j$(nproc)
+sudo make install
 ```
 
 
 ## install
-* ```pip install .```
+#### python
+ ```pip install .```
+
+#### c++
+```
+cd src
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+```
