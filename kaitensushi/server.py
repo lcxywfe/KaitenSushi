@@ -48,7 +48,8 @@ async def server(ep):
         fh = FeatureHeader()
         await ep.recv(fh.buffer)
         if fh.key() == "close":
-                break
+            logging.info("[Server] connection closed uid: {}".format(ep.uid))
+            break
         key = fh.key()
 
         if ch.mode() == "write":

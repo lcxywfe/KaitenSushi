@@ -43,7 +43,7 @@ async def start_reader(addr, port):
             with buf_con:
                 key = buf[:KEY_BYTES].tobytes().decode().rstrip()
                 logging.info("Got {}".format(key))
-                buf_map[key] = buf[KEY_BYTES:]
+                buf_map[key] = buf[KEY_BYTES:]  # TODO opt zero copy
                 buf_con.notify_all()
 
     await ep.close()

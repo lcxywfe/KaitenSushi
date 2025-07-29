@@ -1,15 +1,20 @@
 cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 project(kaitensushi)
 
-set(UCX_DIR "/opt/ucx/lib/cmake/ucx")
+
 find_package(UCX REQUIRED)
-message(STATUS "UCX_INCLUDE_DIRS = ${UCX_INCLUDE_DIRS}")
-message(STATUS "UCX_LIBRARIES = ${UCX_LIBRARIES}")
+find_package(UCXX REQUIRED)
 
-include_directories(${UCX_INCLUDE_DIRS})
-link_directories(${UCX_LIBRARIES})
+set(INSTALL_INCLUDE_DIR include)
+set(INSTALL_LIB_DIR lib)
 
-add_executable(write test/write.cpp)
+add_library(kaitensushi SHARED writer.cpp)
 
-target_include_directories(write PUBLIC include)
-target_link_libraries(write ucp)
+install(DIRECTORY include/kaitensushi/
+        DESTINATION ${INSTALL_INCLUDE_DIR}/kaitensushi
+        FILES_MATCHING PATTERN "*.h")
+
+install(TARGETS kaitensushi LIBRARY DESTINATION ${INSTALL_LIB_DIR})
+
+target_include_directories(kaitensushi PUBLIC include)
+target_link_libraries(kaitensushi PUBLIC ucxx::ucxx)

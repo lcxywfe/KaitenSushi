@@ -1,39 +1,39 @@
 #pragma once
-
+#include <cassert>
 #include <cstring>
 #include <string>
 
-namespace ifq {
 namespace kss {
 
 const static size_t MODE_BYTES = 8;
 const static size_t KEY_BYTES = 64;
 const static size_t LENGTH_BYTES = 8;
 
-class ClientHeader {
+class Header {
 public:
-    ClientHeader(const std::string& mode) {
-        buffer = mode + std::string(MODE_BYTES - mode.size(), ' ');
-    }
+    Header(size_t length) : buffer_{std::string(length, ' ')} {}
+    virtual ~Header() = default;
+    std::string& buffer() { return buffer_; }
 
-private:
-    std::string buffer;
+protected:
+    std::string buffer_;
 };
 
-class FeatureHeader {
+class ClientHeader : public Header {
 public:
-    FeatureHeader(const std::string& key, uint64_t length) {
-        std::string key_str = key + std::string(KEY_BYTES - key.size(), ' ');
-        std::string len_str = std::string(LENGTH_BYTES, ' ');
-        std::memcpy(&len_str[0], &length, sizeof(LENGTH_BYTES));
-        buffer = key_str + len_str;
+    ClientHeader(const std::string& mode) : Header{MODE_BYTES} {
+        assert(mode.size() <= buffer_.size());
+        std::memcpy(&buffer_[0], mode.data(), mode.size());
     }
-
-private:
-    std::string buffer;
-
 };
 
+class FeatureHeader : public Header {
+public:
+    FeatureHeader(const std::string& key, uint64_t length = 0)
+                : Header{KEY_BYTES + LENGTH_BYTES} {
+        std::memcpy(&buffer_[0], key.data(), key.size());
+        std::memcpy(&buffer_[0] + KEY_BYTES, &length, sizeof(length));
+    }
+};
 
-}
 }
