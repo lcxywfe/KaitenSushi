@@ -46,8 +46,10 @@ void Client<thread_safe>::wait() {
     if (thread_safe) {
         mtx_.lock();
     }
-    ucxx::waitRequests(worker_, requests_);
-    requests_.clear();
+    if (requests_.size()) {
+        ucxx::waitRequests(worker_, requests_);
+        requests_.clear();
+    }
     if (thread_safe) {
         mtx_.unlock();
     }
