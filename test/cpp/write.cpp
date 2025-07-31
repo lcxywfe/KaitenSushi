@@ -13,5 +13,6 @@ int main() {
         s[i] = static_cast<unsigned char>(i);
     }
     writer.write("key_num", static_cast<const void*>(s.data()), s.size());
+    writer.wait();
     return 0;
 }

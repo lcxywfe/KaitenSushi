@@ -3,10 +3,13 @@
 
 #include <kaitensushi/headers.h>
 #include <kaitensushi/writer.h>
+#include <kaitensushi/utils.h>
 
 using namespace kss;
 
-Client::Client(const std::string& addr, int port) {
+Client::Client(const std::string& addr, int port, bool thread_safe) :
+            mtx_{thread_safe ? std::make_unique<std::mutex>() : nullptr},
+            requests_{} {
     context_ = ucxx::createContext({}, ucxx::Context::defaultFeatureFlags);
     worker_ = context_->createWorker();
     ep_ = worker_->createEndpointFromHostname(addr, port, true);
@@ -35,8 +38,15 @@ void Client::exchange_peer_info() {
     ucxx::waitSingleRequest(worker_, r1);
 }
 
+void Client::wait() {
+    ConditionalLock<std::mutex> lock{mtx_.get()};
+    ucxx::waitRequests(worker_, requests_);
+    requests_.clear();
+}
 
-Writer::Writer(const std::string& addr, int port) : Client{addr, port}, mtx_{} {
+
+Writer::Writer(const std::string& addr, int port, bool thread_safe)
+        : Client{addr, port, thread_safe} {
     exchange_peer_info();
     ClientHeader ch{"write"};
     auto request = ep_->tagSend(ch.buffer().data(), ch.buffer().size(), ucxx::Tag(tags_.at("msg_send")));
@@ -45,15 +55,15 @@ Writer::Writer(const std::string& addr, int port) : Client{addr, port}, mtx_{} {
 
 
 void Writer::write(const std::string& key, const void* ptr, uint64_t length) {
-    std::lock_guard<std::mutex> lock(mtx_);
+    ConditionalLock<std::mutex> lock{mtx_.get()};
     {
         FeatureHeader fh{key, length};
         auto request = ep_->tagSend(fh.buffer().data(), fh.buffer().size(), ucxx::Tag(tags_.at("msg_send")));
-        ucxx::waitSingleRequest(worker_, request);
+        requests_.push_back(request);
     }
 
     {
         auto request = ep_->tagSend(const_cast<void*>(ptr), length, ucxx::Tag(tags_.at("msg_send")));
-        ucxx::waitSingleRequest(worker_, request);
+        requests_.push_back(request);
     }
 }
