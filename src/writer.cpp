@@ -7,15 +7,17 @@
 
 using namespace kss;
 
-Client::Client(const std::string& addr, int port, bool thread_safe) :
-            mtx_{thread_safe ? std::make_unique<std::mutex>() : nullptr},
+template <bool thread_safe>
+Client<thread_safe>::Client(const std::string& addr, int port) :
+            mtx_{},
             requests_{} {
     context_ = ucxx::createContext({}, ucxx::Context::defaultFeatureFlags);
     worker_ = context_->createWorker();
     ep_ = worker_->createEndpointFromHostname(addr, port, true);
 }
 
-Client::~Client() {
+template <bool thread_safe>
+Client<thread_safe>::~Client() {
     if (ep_) {
         FeatureHeader fh{"close"};
         auto request = ep_->tagSend(fh.buffer().data(), fh.buffer().size(), ucxx::Tag(tags_.at("msg_send")));
@@ -25,7 +27,8 @@ Client::~Client() {
     }
 }
 
-void Client::exchange_peer_info() {
+template <bool thread_safe>
+void Client<thread_safe>::exchange_peer_info() {
     std::string buf0(24, ' ');
     auto r0 = ep_->streamRecv(&buf0[0], 24, false);
     ucxx::waitSingleRequest(worker_, r0);
@@ -38,32 +41,49 @@ void Client::exchange_peer_info() {
     ucxx::waitSingleRequest(worker_, r1);
 }
 
-void Client::wait() {
-    ConditionalLock<std::mutex> lock{mtx_.get()};
+template <bool thread_safe>
+void Client<thread_safe>::wait() {
+    if (thread_safe) {
+        mtx_.lock();
+    }
     ucxx::waitRequests(worker_, requests_);
     requests_.clear();
+    if (thread_safe) {
+        mtx_.unlock();
+    }
 }
 
 
-Writer::Writer(const std::string& addr, int port, bool thread_safe)
-        : Client{addr, port, thread_safe} {
-    exchange_peer_info();
+template <bool thread_safe>
+Writer<thread_safe>::Writer(const std::string& addr, int port)
+        : Client<thread_safe>{addr, port} {
+    this->exchange_peer_info();
     ClientHeader ch{"write"};
-    auto request = ep_->tagSend(ch.buffer().data(), ch.buffer().size(), ucxx::Tag(tags_.at("msg_send")));
-    ucxx::waitSingleRequest(worker_, request);
+    auto request = this->ep_->tagSend(ch.buffer().data(), ch.buffer().size(), ucxx::Tag(this->tags_.at("msg_send")));
+    ucxx::waitSingleRequest(this->worker_, request);
 }
 
-
-void Writer::write(const std::string& key, const void* ptr, uint64_t length) {
-    ConditionalLock<std::mutex> lock{mtx_.get()};
+template <bool thread_safe>
+void Writer<thread_safe>::write(const std::string& key, const void* ptr, uint64_t length) {
+    if (thread_safe) {
+        this->mtx_.lock();
+    }
     {
         FeatureHeader fh{key, length};
-        auto request = ep_->tagSend(fh.buffer().data(), fh.buffer().size(), ucxx::Tag(tags_.at("msg_send")));
-        requests_.push_back(request);
+        auto request = this->ep_->tagSend(fh.buffer().data(), fh.buffer().size(), ucxx::Tag(this->tags_.at("msg_send")));
+        this->requests_.push_back(request);
     }
 
     {
-        auto request = ep_->tagSend(const_cast<void*>(ptr), length, ucxx::Tag(tags_.at("msg_send")));
-        requests_.push_back(request);
+        auto request = this->ep_->tagSend(const_cast<void*>(ptr), length, ucxx::Tag(this->tags_.at("msg_send")));
+        this->requests_.push_back(request);
+    }
+    if (thread_safe) {
+        this->mtx_.unlock();
     }
 }
+
+template class Client<true>;
+template class Client<false>;
+template class Writer<true>;
+template class Writer<false>;

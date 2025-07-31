@@ -7,7 +7,7 @@
 using namespace kss;
 
 int main() {
-    kss::Writer writer{"10.10.10.72", 13337};
+    kss::Writer<true> writer{"10.10.10.72", 13337};
     std::string s(10, '\0');
     for (int i = 0; i < s.size(); ++i) {
         s[i] = static_cast<unsigned char>(i);

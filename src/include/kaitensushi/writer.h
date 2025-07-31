@@ -6,9 +6,10 @@
 
 namespace kss {
 
+template <bool thread_safe>
 class Client {
 public:
-    Client(const std::string& addr, int port, bool thread_safe);
+    Client(const std::string& addr, int port);
     virtual ~Client();
 
     void wait();
@@ -23,12 +24,13 @@ protected:
     std::unordered_map<std::string, uint64_t> tags_;
     std::vector<std::shared_ptr<ucxx::Request>> requests_;
 
-    std::unique_ptr<std::mutex> mtx_;
+    std::mutex mtx_;
 };
 
-class Writer : public Client {
+template <bool thread_safe>
+class Writer : public Client<thread_safe> {
 public:
-    Writer(const std::string& addr, int port, bool thread_safe = false);
+    Writer(const std::string& addr, int port);
 
     void write(const std::string& key, const void* ptr, uint64_t length);
 };
