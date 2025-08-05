@@ -7,7 +7,7 @@
 #### c++
 ```
 git clone https://github.com/openucx/ucx.git
-cd ucx && git checkout v1.8.1
+cd ucx && git checkout v1.18.1
 ./autogen.sh
 ./contrib/configure-release --prefix=/usr/local --enable-mt
 make -j$(nproc)
