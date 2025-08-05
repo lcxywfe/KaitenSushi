@@ -15,7 +15,7 @@ sudo make install
 
 git clone https://github.com/rapidsai/ucxx.git
 cd ucxx/cpp
-mkdir build && build
+mkdir build && cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local -DBUILD_TESTS=OFF
 make -j$(nproc)
 sudo make install
