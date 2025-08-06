@@ -15,6 +15,9 @@ def init_logging(level=logging.INFO):
     )
 
 def init():
+    '''
+    Needs to be called within the actural process where it will be used.
+    '''
     init_logging()
     ucp.init()
 
