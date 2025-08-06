@@ -57,8 +57,7 @@ class Reader:
         self._reader.start()
 
     def __del__(self):
-        if self._reader is not None:
-            self._reader.join()
+        self.close()
 
     def read(self, keys):
         if not isinstance(keys, (list, tuple)):
@@ -78,5 +77,7 @@ class Reader:
         return bufs
 
     def close(self):
-        key_queue.put(["close"])
-        self._reader.join()
+        if self._reader is not None:
+            key_queue.put(["close"])
+            self._reader.join()
+            self._reader = None
