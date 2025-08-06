@@ -15,7 +15,6 @@ async def recv(ep, key, length):
     buf = np.empty(KEY_BYTES + length, dtype=np.uint8)
     buf[:KEY_BYTES] = np.frombuffer(key.encode().ljust(KEY_BYTES, b' '), dtype=np.uint8)
     async with feature_lock:
-        assert key not in feature_dict
         feature_dict[key] = buf
 
     logging.info("[Server] Receiving from client: {}, key: {}".format(ep.uid, key))
