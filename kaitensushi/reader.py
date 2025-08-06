@@ -61,6 +61,9 @@ class Reader:
             self._reader.join()
 
     def read(self, keys):
+        if not isinstance(keys, (list, tuple)):
+            keys = [keys]
+
         key_queue.put(keys)
 
         bufs = dict()
@@ -69,6 +72,9 @@ class Reader:
                 while key not in buf_map:
                     buf_con.wait()
                 bufs[key] = buf_map.pop(key)
+
+        if len(keys) == 1:
+            return bufs[keys[0]]
         return bufs
 
     def close(self):
