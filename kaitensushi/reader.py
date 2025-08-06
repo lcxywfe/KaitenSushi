@@ -7,10 +7,8 @@ import numpy as np
 
 from .utils import *
 
-length = 100 * 1024 * 1024
-batch = 3
-
 key_queue = queue.Queue()
+len_queue = queue.Queue()
 buf_map = dict()
 buf_con = threading.Condition()
 
@@ -26,9 +24,10 @@ async def start_reader(addr, port):
             await ep.send(fh.buffer)
             break
 
+        lens = len_queue.get()
         fhs = []
         bufs = []
-        for key in keys:
+        for key, length in zip(keys, lens):
             fhs.append(FeatureHeader(key, length))
             bufs.append(np.empty(KEY_BYTES + length, dtype=np.uint8))
 
@@ -59,11 +58,13 @@ class Reader:
     def __del__(self):
         self.close()
 
-    def read(self, keys):
+    def read(self, keys, lens):
         if not isinstance(keys, (list, tuple)):
             keys = [keys]
+            lens = [lens]
 
         key_queue.put(keys)
+        len_queue.put(lens)
 
         bufs = dict()
         for key in keys:
@@ -78,6 +79,7 @@ class Reader:
 
     def close(self):
         if self._reader is not None:
+            logging.info("[Reader] close")
             key_queue.put(["close"])
             self._reader.join()
             self._reader = None

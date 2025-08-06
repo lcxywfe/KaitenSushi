@@ -31,7 +31,7 @@ async def send_when_ready(ep, key, length):
 
     async with feature_lock:
         buf = feature_dict[key]
-    assert len(buf) == KEY_BYTES + length
+    assert len(buf) == KEY_BYTES + length, (len(buf), KEY_BYTES, length)
     logging.info("[Server] Sending to client: {}, key: {}".format(ep.uid, key))
     await ep.send(buf)
     logging.info("[Server] Sent to client: {}, key: {}".format(ep.uid, key))
