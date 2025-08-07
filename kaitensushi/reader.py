@@ -16,7 +16,7 @@ async def start_reader(addr, port):
     ep = await ucp.create_endpoint(addr, port)
     ch = ClientHeader("read")
     await ep.send(ch.buffer)
-    logging.info("[Reader] connected")
+    logging.info("[Kss Reader] connected")
     while True:
         keys = key_queue.get()
         if len(keys) == 1 and keys[0] == "close":
@@ -31,17 +31,17 @@ async def start_reader(addr, port):
             fhs.append(FeatureHeader(key, length))
             bufs.append(np.empty(KEY_BYTES + length, dtype=np.uint8))
 
-        logging.info("[Reader] receiving keys: {}".format(keys))
+        logging.debug("[Kss Reader] receiving keys: {}".format(keys))
         n = len(keys)
         sends = [ep.send(fhs[i].buffer) for i in range(n)]
         recvs = [ep.recv(bufs[i]) for i in range(n)]
         await asyncio.gather(*sends, *recvs)
-        logging.info("[Reader] received keys: {}".format(keys))
+        logging.debug("[Kss Reader] received keys: {}".format(keys))
 
         for buf in bufs:
             with buf_con:
                 key = buf[:KEY_BYTES].tobytes().decode().rstrip()
-                logging.info("Got {}".format(key))
+                logging.debug("[Kss Reader] Got {}".format(key))
                 buf_map[key] = buf[KEY_BYTES:]  # TODO opt zero copy
                 buf_con.notify_all()
 
@@ -79,7 +79,7 @@ class Reader:
 
     def close(self):
         if self._reader is not None:
-            logging.info("[Reader] close")
+            logging.info("[Kss Reader] close")
             key_queue.put(["close"])
             self._reader.join()
             self._reader = None

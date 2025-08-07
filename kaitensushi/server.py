@@ -17,9 +17,9 @@ async def recv(ep, key, length):
     async with feature_lock:
         feature_dict[key] = buf
 
-    logging.info("[Server] Receiving from client: {}, key: {}".format(ep.uid, key))
+    logging.debug("[Kss Server] Receiving from client: {}, key: {}".format(ep.uid, key))
     await ep.recv(feature_dict[key][KEY_BYTES:])
-    logging.info("[Server] Received from client: {}, key: {}".format(ep.uid, key))
+    logging.debug("[Kss Server] Received from client: {}, key: {}".format(ep.uid, key))
 
     async with finish_cond:
         finish_dict[key] = True
@@ -32,14 +32,14 @@ async def send_when_ready(ep, key, length):
     async with feature_lock:
         buf = feature_dict[key]
     assert len(buf) == KEY_BYTES + length, (len(buf), KEY_BYTES, length)
-    logging.info("[Server] Sending to client: {}, key: {}".format(ep.uid, key))
+    logging.debug("[Kss Server] Sending to client: {}, key: {}".format(ep.uid, key))
     await ep.send(buf)
-    logging.info("[Server] Sent to client: {}, key: {}".format(ep.uid, key))
+    logging.debug("[Kss Server] Sent to client: {}, key: {}".format(ep.uid, key))
 
 async def server(ep):
     ch = ClientHeader()
     await ep.recv(ch.buffer)
-    logging.info("[Server] Connected client uid: {}, mode: {}".format(ep.uid, ch.mode()))
+    logging.info("[Kss Server] Connected client uid: {}, mode: {}".format(ep.uid, ch.mode()))
 
     tasks = []
 
@@ -47,7 +47,7 @@ async def server(ep):
         fh = FeatureHeader()
         await ep.recv(fh.buffer)
         if fh.key() == "close":
-            logging.info("[Server] connection closed uid: {}".format(ep.uid))
+            logging.info("[Kss Server] connection closed uid: {}".format(ep.uid))
             break
         key = fh.key()
 
@@ -59,14 +59,14 @@ async def server(ep):
             # tasks.append(task)
 
         else:
-            logging.info("[Server] Unknown client mode: {}".format(ch.mode()))
+            logging.error("[Kss Server] Unknown client mode: {}".format(ch.mode()))
 
     await asyncio.gather(*tasks)
     await ep.close()
 
 async def start_server(port):
     listener = ucp.create_listener(server, port=port)
-    logging.info("[Server] Listening on port {}".format(listener.port))
+    logging.info("[Kss Server] Listening on port {}".format(listener.port))
     while True:
         await asyncio.sleep(1)
 

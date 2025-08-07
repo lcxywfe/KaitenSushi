@@ -9,16 +9,21 @@ KEY_BYTES = 64
 
 def init_logging(level=logging.INFO):
     logging.basicConfig(
-        level=logging.INFO,
+        level=level,
         format='%(levelname).1s%(asctime)s.%(msecs)03d %(filename)s:%(lineno)d] %(message)s',
         datefmt='%m%d %H:%M:%S',
     )
 
-def init():
+def init(log_level = "info"):
     '''
     Needs to be called within the actural process where it will be used.
     '''
-    init_logging()
+    assert log_level in ("info", "debug"), log_level
+    if log_level == "info":
+        l = logging.INFO
+    elif log_level == "debug":
+        l = logging.DEBUG
+    init_logging(l)
     ucp.init()
 
 class ClientHeader:
