@@ -42,7 +42,7 @@ async def start_reader(addr, port):
             with buf_con:
                 key = buf[:KEY_BYTES].tobytes().decode().rstrip()
                 logging.debug("[Kss Reader] Got {}".format(key))
-                buf_map[key] = buf[KEY_BYTES:]  # TODO opt zero copy
+                buf_map[key] = buf[KEY_BYTES:]  # zero copy
                 buf_con.notify_all()
 
     await ep.close()
