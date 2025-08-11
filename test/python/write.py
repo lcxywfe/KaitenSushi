@@ -5,7 +5,7 @@ import numpy as np
 
 import kaitensushi as kss
 
-length = 100 * 1024 * 1024
+length = 200 * 1024 * 1024
 
 async def main():
     ep = await ucp.create_endpoint("127.0.0.1", 13337)
@@ -16,7 +16,9 @@ async def main():
     while True:
         key = "key{}".format(idx)
         fh = kss.FeatureHeader(key, length)
+        logging.info("[Writer] Sending head key {}".format(key))
         await ep.send(fh.buffer)
+        logging.info("[Writer] Sent head key {}".format(key))
 
         buf = np.random.randint(0, 100, size=length, dtype=np.uint8)
         logging.info("[Writer] Sending key: {}, value {}".format(key, buf.mean()))

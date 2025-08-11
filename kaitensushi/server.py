@@ -50,6 +50,7 @@ async def server(ep):
             logging.info("[Kss Server] connection closed uid: {}".format(ep.uid))
             break
         key = fh.key()
+        logging.debug("[Kss Server] received header key: {}".format(key))
 
         if ch.mode() == "write":
             await recv(ep, key, fh.length())
